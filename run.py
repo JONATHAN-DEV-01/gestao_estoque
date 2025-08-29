@@ -2,29 +2,34 @@ from flask import Flask
 from src.config.database import db
 from src.routes import init_routes
 import os
+from dotenv import load_dotenv
 
-# Configurações do banco de dados SQLite
-basedir = os.path.abspath(os.path.dirname(__file__))
-SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'database.db')
 
-def create_app():
-    app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+load_dotenv()
 
-    # Inicializa o SQLAlchemy
-    db.init_app(app)
+# Cria a instância da aplicação no escopo global
+app = Flask(__name__)
 
-    # Inicializa as rotas
-    init_routes(app)
+# Configurações do banco de dados MySQL via variáveis de ambiente
+db_user = os.getenv('DB_USER')
+db_password = os.getenv('DB_PASSWORD')
+db_host = 'db'  # Nome do serviço no docker-compose.yml
+db_name = os.getenv('DB_NAME')
 
-    return app
+# String de conexão do SQLAlchemy para MySQL
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_password}@{db_host}:3306/{db_name}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Inicializa o SQLAlchemy e as rotas
+db.init_app(app)
+init_routes(app)
+
+# Opcional: Para ambientes de produção, crie a tabela aqui
+# com app.app_context():
+#    db.create_all()
 
 if __name__ == '__main__':
-    app = create_app()
-
-    # Cria as tabelas do banco de dados
+    # Este bloco só será executado quando você rodar 'python run.py'
     with app.app_context():
         db.create_all()
-
     app.run(debug=True)
