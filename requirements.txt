@@ -6,3 +6,5 @@ sqlalchemy==1.4.49
 python-dotenv
 pymysql
 gunicorn
+twilio==9.7.2
+cryptography
