@@ -1,6 +1,5 @@
-from ..config.database import db
+from src.config.database import db # Corrigido
 import uuid
-
 class VendedorModel(db.Model):
     __tablename__ = 'vendedores'
 
@@ -22,3 +21,5 @@ class VendedorModel(db.Model):
             "celular": self.celular,
             "status": self.status
         }
+        
+        
