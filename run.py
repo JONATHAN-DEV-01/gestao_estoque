@@ -4,19 +4,16 @@ from src.routes import init_routes
 import os
 from dotenv import load_dotenv
 
-# Importa o modelo no escopo global para que o SQLAlchemy o reconheça
-from src.Infrastructuree.vendedor_model import VendedorModel
 
-# Carrega as variáveis de ambiente no escopo global
 load_dotenv()
 
 # Cria a instância da aplicação no escopo global
 app = Flask(__name__)
 
-# Configuração do banco de dados MySQL via variáveis de ambiente
+# Configurações do banco de dados MySQL via variáveis de ambiente
 db_user = os.getenv('DB_USER')
 db_password = os.getenv('DB_PASSWORD')
-db_host = 'db'
+db_host = 'db'  # Nome do serviço no docker-compose.yml
 db_name = os.getenv('DB_NAME')
 
 # String de conexão do SQLAlchemy para MySQL
@@ -27,11 +24,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 init_routes(app)
 
-# Executa db.create_all() ao iniciar a aplicação no contêiner
-with app.app_context():
-    db.create_all()
+# Opcional: Para ambientes de produção, crie a tabela aqui
+# com app.app_context():
+#    db.create_all()
 
-# O Gunicorn usará este objeto 'app'
-# O bloco 'if __name__ == '__main__'' é apenas para testes locais
 if __name__ == '__main__':
+    # Este bloco só será executado quando você rodar 'python run.py'
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
