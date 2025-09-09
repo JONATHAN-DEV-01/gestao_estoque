@@ -1,16 +1,25 @@
 # src/Application/Service/vendedor_service.py
 
+import os
 import random
-from ...config.database import db
+import uuid
+from twilio.rest import Client
+from src.config.database import db
 from src.Infrastructuree.vendedor_model import VendedorModel
+
+# Variáveis do Twilio do seu arquivo .env
+account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+twilio_whatsapp_number = os.getenv('TWILIO_WHATSAPP_NUMBER')
+# Adicione esta linha para ler o número verificado
+verified_phone_number = os.getenv('VERIFIED_PHONE_NUMBER')
 
 class VendedorService:
     @staticmethod
     def create_vendedor(nome, cnpj, email, celular, senha):
-        """Cria um novo vendedor no banco de dados."""
+        """Cria um novo vendedor e envia um código de ativação via WhatsApp."""
         codigo_ativacao = str(random.randint(1000, 9999))
         
-        # Cria a instância do modelo do banco de dados
         novo_vendedor = VendedorModel(
             nome=nome,
             cnpj=cnpj,
@@ -20,11 +29,22 @@ class VendedorService:
             codigo_ativacao=codigo_ativacao
         )
 
-        # Adiciona o novo vendedor à sessão do banco de dados e salva
         db.session.add(novo_vendedor)
         db.session.commit()
         
-        print(f"Código de ativação para o vendedor '{nome}' enviado para o celular '{celular}': {codigo_ativacao}")
+        client = Client(account_sid, auth_token)
+        
+        try:
+            message = client.messages.create(
+                from_=twilio_whatsapp_number,
+                body=f'O código de ativação do Mini Mercado é: {codigo_ativacao}',
+                # Use o número verificado aqui
+                to=verified_phone_number
+            )
+            print(f"Mensagem enviada com sucesso! SID: {message.sid}")
+        except Exception as e:
+            print(f"Erro ao enviar mensagem via Twilio: {e}")
+            raise RuntimeError("Não foi possível enviar o código de ativação. Tente novamente.")
         
         return novo_vendedor
 
@@ -45,7 +65,6 @@ class VendedorService:
         vendedor.status = "Ativo"
         db.session.commit()
         return vendedor
-
     @staticmethod
     def get_all_vendedores():
         """Retorna todos os vendedores do banco de dados."""
