@@ -20,14 +20,14 @@ def init_routes(app):
     def get_all_vendedores():
         return VendedorController.get_all_vendedores()
 
-    @app.route('/vendedores/<string:vendedor_id>', methods=['GET'])
+    @app.route('/vendedores/<int:vendedor_id>', methods=['GET'])
     def get_vendedor(vendedor_id):
         return VendedorController.get_vendedor(vendedor_id)
 
-    @app.route('/vendedores/<string:vendedor_id>', methods=['PUT'])
+    @app.route('/vendedores/<int:vendedor_id>', methods=['PUT'])
     def update_vendedor(vendedor_id):
         return VendedorController.update_vendedor(vendedor_id)
 
-    @app.route('/vendedores/<string:vendedor_id>', methods=['DELETE'])
+    @app.route('/vendedores/<int:vendedor_id>', methods=['DELETE'])
     def delete_vendedor(vendedor_id):
         return VendedorController.delete_vendedor(vendedor_id)
