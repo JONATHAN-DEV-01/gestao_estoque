@@ -19,15 +19,8 @@ services:
     restart: always
     ports:
       - "5000:5000"
-    environment:
-      # Repassando as variáveis de ambiente do .env para o contêiner da API
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
-      TWILIO_WHATSAPP_NUMBER: ${TWILIO_WHATSAPP_NUMBER}
-      VERIFIED_PHONE_NUMBER: ${VERIFIED_PHONE_NUMBER}
+    env_file:
+      - .env
     depends_on:
       - db
     volumes:
