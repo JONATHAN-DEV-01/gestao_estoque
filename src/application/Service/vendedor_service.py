@@ -2,16 +2,15 @@
 
 import os
 import random
-import uuid
 from twilio.rest import Client
 from src.config.database import db
 from src.Infrastructuree.vendedor_model import VendedorModel
+from flask_jwt_extended import create_access_token
 
 # Variáveis do Twilio do seu arquivo .env
 account_sid = os.getenv('TWILIO_ACCOUNT_SID')
 auth_token = os.getenv('TWILIO_AUTH_TOKEN')
 twilio_whatsapp_number = os.getenv('TWILIO_WHATSAPP_NUMBER')
-# Adicione esta linha para ler o número verificado
 verified_phone_number = os.getenv('VERIFIED_PHONE_NUMBER')
 
 class VendedorService:
@@ -19,13 +18,12 @@ class VendedorService:
     def create_vendedor(nome, cnpj, email, celular, senha):
         """Cria um novo vendedor e envia um código de ativação via WhatsApp."""
         codigo_ativacao = str(random.randint(1000, 9999))
-        
         novo_vendedor = VendedorModel(
             nome=nome,
             cnpj=cnpj,
             email=email,
             celular=celular,
-            senha=senha,
+            senha=senha,  # Agora armazena a senha sem criptografia
             codigo_ativacao=codigo_ativacao
         )
 
@@ -38,7 +36,6 @@ class VendedorService:
             message = client.messages.create(
                 from_=twilio_whatsapp_number,
                 body=f'O código de ativação do Mini Mercado é: {codigo_ativacao}',
-                # Use o número verificado aqui
                 to=verified_phone_number
             )
             print(f"Mensagem enviada com sucesso! SID: {message.sid}")
@@ -49,8 +46,28 @@ class VendedorService:
         return novo_vendedor
 
     @staticmethod
+    def login_vendedor(email, senha):
+        vendedor = VendedorModel.query.filter_by(email=email).first()
+
+        if not vendedor:
+            raise ValueError("Email ou senha incorretos.")
+        
+        # Agora a verificação é direta, sem bcrypt
+        if vendedor.senha != senha:
+            raise ValueError("Email ou senha incorretos.")
+
+        if vendedor.status != "Ativo":
+            raise ValueError("Conta ainda não ativada.")
+
+        access_token = create_access_token(identity={"id": vendedor.id, "email": vendedor.email})
+        
+        return {
+            "mensagem": "Login bem-sucedido!",
+            "access_token": access_token
+        }
+
+    @staticmethod
     def activate_vendedor(vendedor_id, codigo_ativacao):
-        """Ativa a conta do vendedor verificando o código de ativação."""
         vendedor = VendedorModel.query.get(vendedor_id)
 
         if not vendedor:
@@ -65,14 +82,13 @@ class VendedorService:
         vendedor.status = "Ativo"
         db.session.commit()
         return vendedor
+
     @staticmethod
     def get_all_vendedores():
-        """Retorna todos os vendedores do banco de dados."""
         return VendedorModel.query.all()
 
     @staticmethod
     def get_vendedor(vendedor_id):
-        """Busca um vendedor específico pelo ID."""
         vendedor = VendedorModel.query.get(vendedor_id)
         if not vendedor:
             raise ValueError("Vendedor não encontrado.")
@@ -80,11 +96,11 @@ class VendedorService:
 
     @staticmethod
     def update_vendedor(vendedor_id, data):
-        """Atualiza os dados de um vendedor existente."""
         vendedor = VendedorModel.query.get(vendedor_id)
         if not vendedor:
             raise ValueError("Vendedor não encontrado.")
         
+        # Agora não faz hash da senha, apenas substitui direto
         for key, value in data.items():
             setattr(vendedor, key, value)
         
@@ -93,7 +109,6 @@ class VendedorService:
 
     @staticmethod
     def delete_vendedor(vendedor_id):
-        """Deleta um vendedor pelo ID."""
         vendedor = VendedorModel.query.get(vendedor_id)
         if vendedor:
             db.session.delete(vendedor)
