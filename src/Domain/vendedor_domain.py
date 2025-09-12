@@ -10,7 +10,6 @@ class Vendedor:
         self.status = status
         self.codigo_ativacao = codigo_ativacao
         self.id = None  # O ID será atribuído pelo repositório/banco de dados
-
     def to_dict(self):
         """Converte o objeto Vendedor em um dicionário para serialização JSON."""
         return {
