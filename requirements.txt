@@ -8,3 +8,7 @@ pymysql
 gunicorn
 twilio==9.7.2
 cryptography
+Flask-JWT-Extended
+PyJWT 
+
+
