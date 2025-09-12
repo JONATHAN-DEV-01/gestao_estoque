@@ -1,27 +1,24 @@
-# src/Presentation/Controller/vendedor_controller.py
+# src/application/controllers/vendedor_controller.py
 
 from flask import request, jsonify, make_response
 from src.application.Service.vendedor_service import VendedorService
 
 class VendedorController:
-
     @staticmethod
     def create_vendedor():
         try:
             data = request.get_json()
-            nome = data.get('nome')  # Use 'nome' para manter a consistência
+            nome = data.get('nome')
             cnpj = data.get('cnpj')
             email = data.get('email')
             celular = data.get('celular')
             senha = data.get('senha')
 
-            # Validação simples
             if not nome or not cnpj or not email or not celular or not senha:
                 return make_response(jsonify({
                     "erro": "Campos obrigatórios: nome, cnpj, email, celular, senha"
                 }), 400)
 
-            # Chama o Service -> cria vendedor com status "Inativo"
             vendedor = VendedorService.create_vendedor(nome, cnpj, email, celular, senha)
 
             return make_response(jsonify({
@@ -35,11 +32,27 @@ class VendedorController:
             }), 500)
 
     @staticmethod
+    def login_vendedor():
+        try:
+            data = request.get_json()
+            email = data.get("email")
+            senha = data.get("senha")
+
+            if not email or not senha:
+                return jsonify({"erro": "Email e senha são obrigatórios"}), 400
+
+            response = VendedorService.login_vendedor(email, senha)
+            return make_response(jsonify(response), 200)
+        
+        except Exception as e:
+            return make_response(jsonify({"erro": str(e)}), 401)
+
+    @staticmethod
     def activate_vendedor():
         try:
             data = request.get_json()
             vendedor_id = data.get("vendedor_id")
-            codigo = data.get("codigo")  # Use 'codigo' para refletir o domain
+            codigo = data.get("codigo")
 
             if not vendedor_id or not codigo:
                 return make_response(jsonify({
@@ -58,7 +71,6 @@ class VendedorController:
                 "erro": str(e)
             }), 500)
 
-    # Métodos restantes para a consistência
     @staticmethod
     def get_all_vendedores():
         try:
