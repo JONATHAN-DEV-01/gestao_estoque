@@ -4,12 +4,16 @@ from src.routes import init_routes
 import os
 from dotenv import load_dotenv
 from src.Infrastructuree.vendedor_model import VendedorModel
+from flask_jwt_extended import JWTManager
 
-# Carrega as variáveis de ambiente no escopo global
+# Carrega variáveis de ambiente
 load_dotenv()
 
-# Cria a instância da aplicação no escopo global
+# Cria a instância da aplicação
 app = Flask(__name__)
+
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "chave_super_secreta_trocar")  
+jwt = JWTManager(app)
 
 # Configurações do banco de dados MySQL via variáveis de ambiente
 db_user = os.getenv('DB_USER')
@@ -25,12 +29,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 init_routes(app)
 
-# Executa db.create_all() ao iniciar a aplicação no contêiner
-# Este comando é executado sempre que o módulo é importado
+# Cria tabelas automaticamente (apenas em dev)
 with app.app_context():
     db.create_all()
 
-# O Gunicorn usará este objeto 'app'
-# O bloco 'if __name__ == '__main__'' é apenas para testes locais
+# Gunicorn usa 'app' como entrypoint
 if __name__ == '__main__':
     app.run(debug=True)
