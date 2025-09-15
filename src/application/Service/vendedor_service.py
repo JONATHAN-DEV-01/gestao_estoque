@@ -1,48 +1,36 @@
 # src/Application/Service/vendedor_service.py
-
 import os
 import random
-from twilio.rest import Client
 from src.config.database import db
 from src.Infrastructuree.vendedor_model import VendedorModel
 from flask_jwt_extended import create_access_token
+from src.Infrastructuree.whatsapp.twilio import TwilioService 
 
-# Variáveis do Twilio do seu arquivo .env
-account_sid = os.getenv('TWILIO_ACCOUNT_SID')
-auth_token = os.getenv('TWILIO_AUTH_TOKEN')
-twilio_whatsapp_number = os.getenv('TWILIO_WHATSAPP_NUMBER')
+twilio_service = TwilioService()
 verified_phone_number = os.getenv('VERIFIED_PHONE_NUMBER')
+
 
 class VendedorService:
     @staticmethod
     def create_vendedor(nome, cnpj, email, celular, senha):
         """Cria um novo vendedor e envia um código de ativação via WhatsApp."""
         codigo_ativacao = str(random.randint(1000, 9999))
+
         novo_vendedor = VendedorModel(
             nome=nome,
             cnpj=cnpj,
             email=email,
             celular=celular,
-            senha=senha,  # Agora armazena a senha sem criptografia
+            senha=senha,  # senha salva em texto plano por enquanto
             codigo_ativacao=codigo_ativacao
         )
 
         db.session.add(novo_vendedor)
         db.session.commit()
-        
-        client = Client(account_sid, auth_token)
-        
-        try:
-            message = client.messages.create(
-                from_=twilio_whatsapp_number,
-                body=f'O código de ativação do Mini Mercado é: {codigo_ativacao}',
-                to=verified_phone_number
-            )
-            print(f"Mensagem enviada com sucesso! SID: {message.sid}")
-        except Exception as e:
-            print(f"Erro ao enviar mensagem via Twilio: {e}")
-            raise RuntimeError("Não foi possível enviar o código de ativação. Tente novamente.")
-        
+
+        # Delega o envio da mensagem ao TwilioService
+        twilio_service.send_whatsapp_code(verified_phone_number, codigo_ativacao)
+
         return novo_vendedor
 
     @staticmethod
@@ -51,8 +39,6 @@ class VendedorService:
 
         if not vendedor:
             raise ValueError("Email ou senha incorretos.")
-        
-        # Agora a verificação é direta, sem bcrypt
         if vendedor.senha != senha:
             raise ValueError("Email ou senha incorretos.")
 
@@ -60,7 +46,6 @@ class VendedorService:
             raise ValueError("Conta ainda não ativada.")
 
         access_token = create_access_token(identity={"id": vendedor.id, "email": vendedor.email})
-        
         return {
             "mensagem": "Login bem-sucedido!",
             "access_token": access_token
@@ -75,7 +60,7 @@ class VendedorService:
 
         if vendedor.status == "Ativo":
             raise ValueError("Conta já está ativa.")
-        
+
         if vendedor.codigo_ativacao != codigo_ativacao:
             raise ValueError("Código de ativação incorreto.")
 
@@ -99,11 +84,11 @@ class VendedorService:
         vendedor = VendedorModel.query.get(vendedor_id)
         if not vendedor:
             raise ValueError("Vendedor não encontrado.")
-        
-        # Agora não faz hash da senha, apenas substitui direto
+
+        # Atualiza os campos normalmente (sem hash)
         for key, value in data.items():
             setattr(vendedor, key, value)
-        
+
         db.session.commit()
         return vendedor
 
