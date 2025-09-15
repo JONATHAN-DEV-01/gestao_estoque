@@ -19,13 +19,9 @@ class VendedorController:
                     "erro": "Campos obrigatórios: nome, cnpj, email, celular, senha"
                 }), 400)
                 
-        array = {
-                "nome": nome,
-                "cnpj": cnpj,
-                "email": email,
-        }
+                a
 
-            vendedor = VendedorService.create_vendedor(array)
+            vendedor = VendedorService.create_vendedor(nome, cnpj, email, celular, senha)
 
             return make_response(jsonify({
                 "mensagem": "Vendedor cadastrado com sucesso",
