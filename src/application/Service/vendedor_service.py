@@ -12,23 +12,22 @@ verified_phone_number = os.getenv('VERIFIED_PHONE_NUMBER')
 
 class VendedorService:
     @staticmethod
-    def create_vendedor(nome, cnpj, email, celular, senha):
+    def create_vendedor(array):
         """Cria um novo vendedor e envia um código de ativação via WhatsApp."""
         codigo_ativacao = str(random.randint(1000, 9999))
 
         novo_vendedor = VendedorModel(
-            nome=nome,
-            cnpj=cnpj,
-            email=email,
-            celular=celular,
-            senha=senha,  # senha salva em texto plano por enquanto
+            nome=array["nome"],
+            cnpj=array["cnpj"],
+            email=array["email"],
+            celular=array["celular"],
+            senha=array["senha"],  
             codigo_ativacao=codigo_ativacao
         )
 
         db.session.add(novo_vendedor)
         db.session.commit()
 
-        # Delega o envio da mensagem ao TwilioService
         twilio_service.send_whatsapp_code(verified_phone_number, codigo_ativacao)
 
         return novo_vendedor
