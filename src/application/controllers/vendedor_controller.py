@@ -18,10 +18,16 @@ class VendedorController:
                 return make_response(jsonify({
                     "erro": "Campos obrigatórios: nome, cnpj, email, celular, senha"
                 }), 400)
-                
-                a
 
-            vendedor = VendedorService.create_vendedor(nome, cnpj, email, celular, senha)
+            array = {
+                "nome": nome,
+                "cnpj": cnpj,
+                "email": email,
+                "celular": celular,
+                "senha": senha
+            }
+
+            vendedor = VendedorService.create_vendedor(array)
 
             return make_response(jsonify({
                 "mensagem": "Vendedor cadastrado com sucesso",
@@ -32,7 +38,6 @@ class VendedorController:
             return make_response(jsonify({
                 "erro": str(e)
             }), 500)
-
     @staticmethod
     def login_vendedor():
         try:
