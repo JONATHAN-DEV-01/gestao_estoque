@@ -44,7 +44,8 @@ class VendedorService:
         if vendedor.status != "Ativo":
             raise ValueError("Conta ainda não ativada.")
 
-        access_token = create_access_token(identity={"id": vendedor.id, "email": vendedor.email})
+        access_token = create_access_token(identity=str(vendedor.id))
+        
         return {
             "mensagem": "Login bem-sucedido!",
             "access_token": access_token
