@@ -13,6 +13,13 @@ def init_routes(app):
     def login_vendedor():
         return VendedorController.login_vendedor()
 
+    # --- ROTA DE LOGOUT ADICIONADA ---
+    @app.route('/logout', methods=['POST'])
+    @jwt_required() # O usuário precisa estar logado (enviar um token válido) para poder deslogar
+    def logout():
+        return VendedorController.logout()
+    # -----------------------------------
+
     @app.route('/vendedores', methods=['POST'])
     def create_vendedor():
         return VendedorController.create_vendedor()

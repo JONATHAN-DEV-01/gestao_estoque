@@ -2,8 +2,12 @@
 
 from flask import request, jsonify, make_response
 from src.application.Service.vendedor_service import VendedorService
+# --- ADICIONADO ---
+from flask_jwt_extended import get_jwt
+# --------------------
 
 class VendedorController:
+    # ... (métodos create_vendedor, login_vendedor, etc. continuam aqui sem alteração) ...
     @staticmethod
     def create_vendedor():
         try:
@@ -53,6 +57,18 @@ class VendedorController:
         
         except Exception as e:
             return make_response(jsonify({"erro": str(e)}), 401)
+
+    # --- MÉTODO DE LOGOUT ADICIONADO ---
+    @staticmethod
+    def logout():
+        try:
+            # Extrai o JTI (identificador único do token) do payload do token atual
+            jti = get_jwt()["jti"]
+            VendedorService.logout(jti)
+            return make_response(jsonify({"mensagem": "Logout bem-sucedido"}), 200)
+        except Exception as e:
+            return make_response(jsonify({"erro": str(e)}), 500)
+    # ------------------------------------
 
     @staticmethod
     def activate_vendedor():

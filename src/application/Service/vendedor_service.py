@@ -3,8 +3,11 @@ import os
 import random
 from src.config.database import db
 from src.Infrastructuree.vendedor_model import VendedorModel
+# --- ADICIONADO ---
+from src.Infrastructuree.token_blocklist_model import TokenBlocklistModel 
+# --------------------
 from flask_jwt_extended import create_access_token
-from src.Infrastructuree.whatsapp.twilio import TwilioService 
+from src.Infrastructuree.whatsapp.twilio import TwilioService
 
 twilio_service = TwilioService()
 verified_phone_number = os.getenv('VERIFIED_PHONE_NUMBER')
@@ -50,6 +53,15 @@ class VendedorService:
             "mensagem": "Login bem-sucedido!",
             "access_token": access_token
         }
+    
+    # --- MÉTODO DE LOGOUT ADICIONADO ---
+    @staticmethod
+    def logout(jti):
+        """Adiciona o JTI do token a blocklist para invalidá-lo."""
+        token_blocklist = TokenBlocklistModel(jti=jti)
+        db.session.add(token_blocklist)
+        db.session.commit()
+    # ------------------------------------
 
     @staticmethod
     def activate_vendedor(vendedor_id, codigo_ativacao):
