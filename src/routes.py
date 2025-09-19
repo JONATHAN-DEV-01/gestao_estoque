@@ -50,3 +50,8 @@ def init_routes(app):
     def delete_vendedor(vendedor_id):
         # Lógica de validação do ID no controller
         return VendedorController.delete_vendedor(vendedor_id)
+    
+    @app.route('/vendedores/<int:vendedor_id>/deactivate', methods=['POST'])
+    @jwt_required()
+    def deactivate_vendedor(vendedor_id):
+        return VendedorController.deactivate_vendedor(vendedor_id)
