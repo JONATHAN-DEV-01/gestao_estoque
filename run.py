@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from src.config.database import db
 from src.routes import init_routes
 import os
@@ -8,48 +8,56 @@ from src.Infrastructuree.vendedor_model import VendedorModel
 from src.Infrastructuree.token_blocklist_model import TokenBlocklistModel
 # --------------------
 from flask_jwt_extended import JWTManager
+    
+    
 
-# Carrega variáveis de ambiente
+# --- 1. Inicialização e Carregamento de Configurações ---
 load_dotenv()
-
-# Cria a instância da aplicação
 app = Flask(__name__)
 
-app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "chave_super_secreta_trocar") 
-# --- ADICIONADO: Configuração da blocklist ---
-app.config["JWT_BLOCKLIST_ENABLED"] = True
-app.config["JWT_BLOCKLIST_TOKEN_CHECKS"] = ["access"] # Verifica tokens de acesso
-# ---------------------------------------------
-jwt = JWTManager(app)
-
-# --- ADICIONADO: Callback para verificar a blocklist ---
-# Esta função será chamada toda vez que um endpoint protegido for acessado
-# e verificará se o token JTI está na nossa tabela de blocklist.
-@jwt.token_in_blocklist_loader
-def check_if_token_in_blocklist(jwt_header, jwt_payload):
-    jti = jwt_payload["jti"]
-    token = TokenBlocklistModel.query.filter_by(jti=jti).first()
-    return token is not None
-# --------------------------------------------------------
-
-# Configurações do banco de dados MySQL via variáveis de ambiente
+# --- 2. Configuração do Banco de Dados ---
 db_user = os.getenv('DB_USER')
 db_password = os.getenv('DB_PASSWORD')
-db_host = 'db'
+db_host = os.getenv('DB_HOST', 'db') # Usar 'db' como padrão para Docker
 db_name = os.getenv('DB_NAME')
 
-# String de conexão do SQLAlchemy para MySQL
 app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_password}@{db_host}:3306/{db_name}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Inicializa o SQLAlchemy e as rotas
+# --- 3. Configuração do JWT (JSON Web Token) ---
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "fallback_super_secret_key")
+app.config["JWT_BLOCKLIST_ENABLED"] = True
+app.config["JWT_BLOCKLIST_TOKEN_CHECKS"] = ["access"] # Verifica a blocklist para tokens de acesso
+jwt = JWTManager(app)
+
+# --- Callbacks do JWT ---
+
+@jwt.token_in_blocklist_loader
+def check_if_token_in_blocklist(jwt_header, jwt_payload):
+    """
+    Callback que verifica se um token está na blocklist a cada requisição protegida.
+    """
+    jti = jwt_payload["jti"]
+    token = TokenBlocklistModel.query.filter_by(jti=jti).first()
+    return token is not None
+
+@jwt.revoked_token_loader
+def revoked_token_callback(jwt_header, jwt_payload):
+    """
+    Define a resposta que será enviada quando um token revogado (na blocklist) for usado.
+    """
+    return jsonify({"msg": "Token has been revoked"}), 422
+
+# --- 4. Inicialização dos Componentes da Aplicação ---
 db.init_app(app)
 init_routes(app)
 
-# Cria tabelas automaticamente (apenas em dev)
+# Cria as tabelas do banco de dados, se não existirem.
+# Em um ambiente de produção, é melhor usar uma ferramenta de migração como Flask-Migrate.
 with app.app_context():
     db.create_all()
 
-# Gunicorn usa 'app' como entrypoint
+# --- 5. Ponto de Entrada para Execução ---
 if __name__ == '__main__':
-    app.run(debug=True)
+    # O debug=True é ideal para desenvolvimento, mas deve ser False em produção.
+    app.run(host='0.0.0.0', port=5000, debug=True)
