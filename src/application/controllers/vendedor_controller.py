@@ -124,6 +124,19 @@ class VendedorController:
         except Exception as e:
             return make_response(jsonify({"erro": str(e)}), 500)
 
+   
+    @staticmethod
+    def deactivate_vendedor(vendedor_id):
+        try:
+            vendedor = VendedorService.deactivate_vendedor(vendedor_id)
+            return make_response(jsonify({"mensagem": "Vendedor desativado com sucesso","vendedor": vendedor.to_dict()}), 200)
+        except ValueError as e:
+                # Erros de "não encontrado" ou "já inativo"
+            return make_response(jsonify({"erro": str(e)}), 404)
+        except Exception as e:
+                # Outros erros inesperados
+            return make_response(jsonify({"erro": str(e)}), 500)
+
     @staticmethod
     def delete_vendedor(vendedor_id):
         try:

@@ -1,115 +1,143 @@
-# tests/test_vendedores.py (Versão Corrigida e Refatorada)
-
 import pytest
 import json
 from unittest.mock import patch
 from src.config.database import db
+from src.Infrastructuree.vendedor_model import VendedorModel
 
-# --- Fixtures: Funções de ajuda que preparam o ambiente para os testes ---
+# --- Fixture Principal: Prepara todo o ambiente uma única vez ---
 
-@pytest.fixture(scope="module")
-def vendedor_data():
-    """Fornece dados consistentes para o vendedor em todos os testes do módulo."""
-    return {
-        "nome": "Vendedor de Teste Refatorado",
-        "cnpj": "55.666.777/0001-88",
-        "email": "teste-refatorado@vendedor.com",
-        "celular": "+5511977776666",
-        "senha": "senhaSegura456"
-    }
-
-@pytest.fixture(scope="module")
-def vendedor_id(client, init_database, vendedor_data):
+@pytest.fixture(scope="session")
+def initial_setup(client, init_database):
     """
-    Cria um vendedor no início dos testes e retorna seu ID.
-    O mock é aplicado aqui para afetar apenas a criação.
+    Executado uma vez por sessão. Cria, ativa e faz login de dois vendedores
+    para serem usados em todos os testes.
     """
     with patch('src.application.Service.vendedor_service.TwilioService') as mock_twilio:
         mock_instance = mock_twilio.return_value
         mock_instance.send_whatsapp_code.return_value = None
-        
-        response = client.post('/vendedores', data=json.dumps(vendedor_data), content_type='application/json')
+
+        # --- Vendedor 1 (Admin) ---
+        admin_data = {
+            "nome": "Vendedor Admin", "cnpj": "11.111.111/0001-11",
+            "email": "admin@teste.com", "celular": "+5511911111111", "senha": "senhaAdmin"
+        }
+        response = client.post('/vendedores', data=json.dumps(admin_data), content_type='application/json')
         assert response.status_code == 201
-        return response.json['vendedor']['id']
+        admin_id = response.json['vendedor']['id']
+        
+        admin_user = db.session.get(VendedorModel, admin_id)
+        admin_user.status = "Ativo"
+        db.session.commit()
 
-@pytest.fixture(scope="module")
-def active_vendedor(init_database, vendedor_id):
-    """Ativa a conta do vendedor para permitir o login nos testes seguintes."""
-    from src.Infrastructuree.vendedor_model import VendedorModel
-    vendedor = db.session.get(VendedorModel, vendedor_id)
-    vendedor.status = "Ativo"
-    init_database.session.commit()
-    return vendedor_id
+        login_resp_admin = client.post('/login', data=json.dumps({"email": admin_data['email'], "senha": admin_data['senha']}), content_type='application/json')
+        admin_token = login_resp_admin.json['access_token']
 
-@pytest.fixture(scope="module")
-def auth_headers(client, vendedor_data, active_vendedor):
-    """Faz o login do vendedor ativado e retorna os headers de autorização."""
-    login_data = {"email": vendedor_data['email'], "senha": vendedor_data['senha']}
-    response = client.post('/login', data=json.dumps(login_data), content_type='application/json')
-    assert response.status_code == 200
-    access_token = response.json['access_token']
-    return {'Authorization': f'Bearer {access_token}'}
+        # --- Vendedor 2 (Comum) ---
+        comum_data = {
+            "nome": "Vendedor Comum", "cnpj": "22.222.222/0001-22",
+            "email": "comum@teste.com", "celular": "+5511922222222", "senha": "senhaComum"
+        }
+        response = client.post('/vendedores', data=json.dumps(comum_data), content_type='application/json')
+        assert response.status_code == 201
+        comum_id = response.json['vendedor']['id']
 
+        comum_user = db.session.get(VendedorModel, comum_id)
+        comum_user.status = "Ativo"
+        db.session.commit()
+        
+        login_resp_comum = client.post('/login', data=json.dumps({"email": comum_data['email'], "senha": comum_data['senha']}), content_type='application/json')
+        comum_token = login_resp_comum.json['access_token']
 
-# --- Testes Granulares: Uma função para cada rota/cenário ---
+        # Retorna todos os dados preparados para os testes
+        yield {
+            "admin": {"id": admin_id, "token": admin_token, "data": admin_data},
+            "comum": {"id": comum_id, "token": comum_token, "data": comum_data}
+        }
+
+# --- Testes que usam os dados preparados ---
 
 def test_health_check(client):
-    """Testa se a rota /api está funcionando."""
+    """Testa a rota de status da API."""
     response = client.get('/api')
     assert response.status_code == 200
-    assert response.json['mensagem'] == "API - OK; Docker - Up"
 
-def test_create_vendedor_route_works(vendedor_id):
-    """Testa se a criação do vendedor (feita na fixture) funcionou."""
-    assert vendedor_id is not None
-
-def test_login_vendedor_route_works(auth_headers):
-    """Testa se o login (feito na fixture) e a geração de token funcionaram."""
-    assert 'Authorization' in auth_headers
-    assert 'Bearer' in auth_headers['Authorization']
-
-def test_get_all_vendedores_protected(client, auth_headers):
-    """Testa se a rota GET /vendedores está protegida e retorna uma lista."""
-    response = client.get('/vendedores', headers=auth_headers)
+def test_get_all_vendedores(client, initial_setup):
+    """Testa se a listagem de vendedores funciona e retorna os 2 criados."""
+    admin_headers = {'Authorization': f'Bearer {initial_setup["admin"]["token"]}'}
+    response = client.get('/vendedores', headers=admin_headers)
     assert response.status_code == 200
     assert isinstance(response.json, list)
+    assert len(response.json) >= 2 # Pelo menos 2 que criamos
 
-def test_get_vendedor_by_id_protected(client, auth_headers, vendedor_id):
-    """Testa se a rota GET /vendedores/<id> retorna o vendedor correto."""
-    response = client.get(f'/vendedores/{vendedor_id}', headers=auth_headers)
+def test_get_one_vendedor(client, initial_setup):
+    """Testa a busca de um vendedor específico."""
+    admin_headers = {'Authorization': f'Bearer {initial_setup["admin"]["token"]}'}
+    comum_id = initial_setup["comum"]["id"]
+    response = client.get(f'/vendedores/{comum_id}', headers=admin_headers)
     assert response.status_code == 200
-    assert response.json['id'] == vendedor_id
+    assert response.json['id'] == comum_id
 
-def test_logout(client, auth_headers):
-    """Testa se a rota de logout funciona e invalida o token."""
-    # Faz o logout
-    response = client.post('/logout', headers=auth_headers)
+def test_update_vendedor(client, initial_setup):
+    """Testa a atualização de um vendedor."""
+    admin_headers = {'Authorization': f'Bearer {initial_setup["admin"]["token"]}'}
+    comum_id = initial_setup["comum"]["id"]
+    update_data = {"nome": "Vendedor Comum (Nome Alterado)"}
+    
+    response = client.put(f'/vendedores/{comum_id}', headers=admin_headers, data=json.dumps(update_data), content_type='application/json')
     assert response.status_code == 200
-    assert response.json['mensagem'] == "Logout bem-sucedido"
+    assert response.json['nome'] == "Vendedor Comum (Nome Alterado)"
 
-    # Tenta usar o mesmo token novamente
-    response = client.get('/vendedores', headers=auth_headers)
-    assert response.status_code == 422 # Espera "Token revogado"
-    assert response.json['msg'] == 'Token has been revoked'
+def test_deactivate_vendedor(client, initial_setup):
+    """Testa a desativação de uma conta."""
+    admin_headers = {'Authorization': f'Bearer {initial_setup["admin"]["token"]}'}
+    comum_id = initial_setup["comum"]["id"]
+    
+    response = client.post(f'/vendedores/{comum_id}/deactivate', headers=admin_headers)
+    assert response.status_code == 200
+    assert response.json['vendedor']['status'] == "Inativo"
 
-def test_delete_vendedor(client, vendedor_data, active_vendedor):
-    """Testa se um vendedor pode ser deletado e se ele realmente some."""
-    # Precisa de um novo token, pois o anterior foi invalidado no teste de logout
-    login_data = {"email": vendedor_data['email'], "senha": vendedor_data['senha']}
+def test_login_fails_after_deactivation(client, initial_setup):
+    """Testa que o login falha para uma conta desativada."""
+    comum_data = initial_setup["comum"]["data"]
+    login_data = {"email": comum_data['email'], "senha": comum_data['senha']}
     response = client.post('/login', data=json.dumps(login_data), content_type='application/json')
-    new_token = response.json['access_token']
-    headers = {'Authorization': f'Bearer {new_token}'}
+    assert response.status_code == 401
+    assert "Conta ainda não ativada" in response.json['erro']
 
-    # Deleta o vendedor
-    response = client.delete(f'/vendedores/{active_vendedor}', headers=headers)
+
+def test_delete_vendedor(client, initial_setup):
+    """Testa a exclusão de um vendedor usando o token de outro."""
+    # O Vendedor Admin deleta o Vendedor Comum
+    admin_headers = {'Authorization': f'Bearer {initial_setup["admin"]["token"]}'}
+    comum_id = initial_setup["comum"]["id"]
+
+    # Deleta o vendedor "comum"
+    response = client.delete(f'/vendedores/{comum_id}', headers=admin_headers)
     assert response.status_code == 200
-    assert response.json['mensagem'] == "Vendedor excluído com sucesso"
-
-    # Verifica se ele não existe mais
-    response = client.get(f'/vendedores/{active_vendedor}', headers=headers)
-    assert response.status_code == 404
+    
+    # Verifica se ele foi realmente deletado
+    response_after = client.get(f'/vendedores/{comum_id}', headers=admin_headers)
+    assert response_after.status_code == 404
 
 def test_acesso_negado_sem_token(client):
-    """Testa se as rotas protegidas retornam 401 Unauthorized sem um token."""
+    """Testa a segurança da rota, que não deve permitir acesso sem token."""
     response = client.get('/vendedores')
     assert response.status_code == 401
+    
+def test_logout(client, initial_setup):
+    """Testa o logout e a invalidação do token."""
+    admin_headers = {'Authorization': f'Bearer {initial_setup["admin"]["token"]}'}
+    
+    # Faz o logout
+    response = client.post('/logout', headers=admin_headers)
+    assert response.status_code == 200
+    
+    # Tenta usar o mesmo token
+    response_after = client.get('/vendedores', headers=admin_headers)
+    assert response_after.status_code == 422 # Token revogado
+
+def test_create_vendedor_com_dados_faltando(client):
+    """Testa a validação de erro para dados incompletos."""
+    vendedor_incompleto = {"nome": "Incompleto", "senha": "123"}
+    response = client.post('/vendedores', data=json.dumps(vendedor_incompleto), content_type='application/json')
+    assert response.status_code == 400

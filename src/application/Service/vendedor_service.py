@@ -11,14 +11,13 @@ from src.Infrastructuree.whatsapp.twilio import TwilioService
 class VendedorService:
     @staticmethod
     def create_vendedor(array):
-        # (Este método não usa consultas, então permanece igual)
         codigo_ativacao = str(random.randint(1000, 9999))
         novo_vendedor = VendedorModel(
             nome=array["nome"],
             cnpj=array["cnpj"],
             email=array["email"],
             celular=array["celular"],
-            senha=array["senha"], # Mantendo a lógica de texto puro conforme solicitado
+            senha=array["senha"],
             codigo_ativacao=codigo_ativacao
         )
         db.session.add(novo_vendedor)
@@ -27,12 +26,12 @@ class VendedorService:
         try:
             twilio_service = TwilioService()
             verified_phone_number = os.getenv('VERIFIED_PHONE_NUMBER')
-            # twilio_service.send_whatsapp_code(verified_phone_number, codigo_ativacao)
+            twilio_service.send_whatsapp_code(verified_phone_number, codigo_ativacao)
         except Exception as e:
-            print(f"AVISO: Falha ao tentar enviar WhatsApp: {e}")
+            print(f"ERRO ao chamar o TwilioService: {e}")
 
         return novo_vendedor
-
+    
     @staticmethod
     def login_vendedor(email, senha):
         # ### ALTERADO ###: Usando o novo estilo de consulta
@@ -101,6 +100,22 @@ class VendedorService:
         for key, value in data.items():
             setattr(vendedor, key, value)
         
+        db.session.commit()
+        return vendedor
+
+   
+    @staticmethod
+    def deactivate_vendedor(vendedor_id):
+        """Desativa a conta de um vendedor, mudando seu status para 'Inativo'."""
+        vendedor = db.session.get(VendedorModel, vendedor_id)
+
+        if not vendedor:
+            raise ValueError("Vendedor não encontrado.")
+
+        if vendedor.status == "Inativo":
+            raise ValueError("Esta conta já está inativa.")
+
+        vendedor.status = "Inativo"
         db.session.commit()
         return vendedor
 
