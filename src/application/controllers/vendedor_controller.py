@@ -2,48 +2,29 @@
 
 from flask import request, jsonify, make_response
 from src.application.Service.vendedor_service import VendedorService
-# --- ADICIONADO ---
 from flask_jwt_extended import get_jwt
-# --------------------
 
 class VendedorController:
-    # ... (métodos create_vendedor, login_vendedor, etc. continuam aqui sem alteração) ...
+
     @staticmethod
     def create_vendedor():
+        service = VendedorService()
         try:
             data = request.get_json()
-            nome = data.get('nome')
-            cnpj = data.get('cnpj')
-            email = data.get('email')
-            celular = data.get('celular')
-            senha = data.get('senha')
+            if not all(k in data for k in ['nome', 'cnpj', 'email', 'celular', 'senha']):
+                return make_response(jsonify({"erro": "Campos obrigatórios: nome, cnpj, email, celular, senha"}), 400)
 
-            if not nome or not cnpj or not email or not celular or not senha:
-                return make_response(jsonify({
-                    "erro": "Campos obrigatórios: nome, cnpj, email, celular, senha"
-                }), 400)
-
-            array = {
-                "nome": nome,
-                "cnpj": cnpj,
-                "email": email,
-                "celular": celular,
-                "senha": senha
-            }
-
-            vendedor = VendedorService.create_vendedor(array)
-
+            vendedor = service.create_vendedor(data)
             return make_response(jsonify({
                 "mensagem": "Vendedor cadastrado com sucesso",
                 "vendedor": vendedor.to_dict()
             }), 201)
-
         except Exception as e:
-            return make_response(jsonify({
-                "erro": str(e)
-            }), 500)
+            return make_response(jsonify({"erro": str(e)}), 500)
+
     @staticmethod
     def login_vendedor():
+        service = VendedorService()
         try:
             data = request.get_json()
             email = data.get("email")
@@ -52,52 +33,45 @@ class VendedorController:
             if not email or not senha:
                 return jsonify({"erro": "Email e senha são obrigatórios"}), 400
 
-            response = VendedorService.login_vendedor(email, senha)
+            response = service.login_vendedor(email, senha)
             return make_response(jsonify(response), 200)
-        
-        except Exception as e:
+        except ValueError as e: # Captura erros de negócio, como senha errada
             return make_response(jsonify({"erro": str(e)}), 401)
+        except Exception as e: # Captura outros erros inesperados
+            return make_response(jsonify({"erro": str(e)}), 500)
 
-    # --- MÉTODO DE LOGOUT ADICIONADO ---
     @staticmethod
     def logout():
         try:
-            # Extrai o JTI (identificador único do token) do payload do token atual
             jti = get_jwt()["jti"]
             VendedorService.logout(jti)
             return make_response(jsonify({"mensagem": "Logout bem-sucedido"}), 200)
         except Exception as e:
             return make_response(jsonify({"erro": str(e)}), 500)
-    # ------------------------------------
 
     @staticmethod
     def activate_vendedor():
+        service = VendedorService()
         try:
             data = request.get_json()
             vendedor_id = data.get("vendedor_id")
             codigo = data.get("codigo")
 
-            if not vendedor_id or not codigo:
-                return make_response(jsonify({
-                    "erro": "Campos obrigatórios: vendedor_id, codigo"
-                }), 400)
-
-            vendedor = VendedorService.activate_vendedor(vendedor_id, codigo)
-
+            vendedor = service.activate_vendedor(vendedor_id, codigo)
             return make_response(jsonify({
                 "mensagem": "Conta ativada com sucesso",
                 "vendedor": vendedor.to_dict()
             }), 200)
-
+        except ValueError as e:
+            return make_response(jsonify({"erro": str(e)}), 400)
         except Exception as e:
-            return make_response(jsonify({
-                "erro": str(e)
-            }), 500)
+            return make_response(jsonify({"erro": str(e)}), 500)
 
     @staticmethod
     def get_all_vendedores():
+        service = VendedorService()
         try:
-            vendedores = VendedorService.get_all_vendedores()
+            vendedores = service.get_all_vendedores()
             vendedores_list = [v.to_dict() for v in vendedores]
             return make_response(jsonify(vendedores_list), 200)
         except Exception as e:
@@ -105,8 +79,9 @@ class VendedorController:
 
     @staticmethod
     def get_vendedor(vendedor_id):
+        service = VendedorService()
         try:
-            vendedor = VendedorService.get_vendedor(vendedor_id)
+            vendedor = service.get_vendedor(vendedor_id)
             return make_response(jsonify(vendedor.to_dict()), 200)
         except ValueError as e:
             return make_response(jsonify({"erro": str(e)}), 404)
@@ -115,32 +90,35 @@ class VendedorController:
 
     @staticmethod
     def update_vendedor(vendedor_id):
+        service = VendedorService()
         try:
             data = request.get_json()
-            vendedor_atualizado = VendedorService.update_vendedor(vendedor_id, data)
+            vendedor_atualizado = service.update_vendedor(vendedor_id, data)
             return make_response(jsonify(vendedor_atualizado.to_dict()), 200)
         except ValueError as e:
             return make_response(jsonify({"erro": str(e)}), 404)
         except Exception as e:
             return make_response(jsonify({"erro": str(e)}), 500)
-
-   
+    
     @staticmethod
     def deactivate_vendedor(vendedor_id):
+        service = VendedorService()
         try:
-            vendedor = VendedorService.deactivate_vendedor(vendedor_id)
-            return make_response(jsonify({"mensagem": "Vendedor desativado com sucesso","vendedor": vendedor.to_dict()}), 200)
+            vendedor = service.deactivate_vendedor(vendedor_id)
+            return make_response(jsonify({
+                "mensagem": "Vendedor desativado com sucesso",
+                "vendedor": vendedor.to_dict()
+            }), 200)
         except ValueError as e:
-                # Erros de "não encontrado" ou "já inativo"
             return make_response(jsonify({"erro": str(e)}), 404)
         except Exception as e:
-                # Outros erros inesperados
             return make_response(jsonify({"erro": str(e)}), 500)
 
     @staticmethod
     def delete_vendedor(vendedor_id):
+        service = VendedorService()
         try:
-            VendedorService.delete_vendedor(vendedor_id)
+            service.delete_vendedor(vendedor_id)
             return make_response(jsonify({"mensagem": "Vendedor excluído com sucesso"}), 200)
         except ValueError as e:
             return make_response(jsonify({"erro": str(e)}), 404)
