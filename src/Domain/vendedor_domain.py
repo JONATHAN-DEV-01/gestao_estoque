@@ -9,9 +9,8 @@ class Vendedor:
         self.senha = senha
         self.status = status
         self.codigo_ativacao = codigo_ativacao
-        self.id = None  # O ID será atribuído pelo repositório/banco de dados
+        self.id = None  
     def to_dict(self):
-        """Converte o objeto Vendedor em um dicionário para serialização JSON."""
         return {
             "id": self.id,
             "nome": self.nome,

@@ -1,5 +1,6 @@
 from flask import jsonify, make_response, request
 from src.application.controllers.vendedor_controller import VendedorController
+from src.application.controllers.produto_controller import ProdutoController
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 def init_routes(app):
@@ -55,3 +56,41 @@ def init_routes(app):
     @jwt_required()
     def deactivate_vendedor(vendedor_id):
         return VendedorController.deactivate_vendedor(vendedor_id)
+    
+
+
+
+    # ROTAS DOS PRODUTOS
+
+
+
+
+    @app.route('/produtos', methods=['POST'])
+    @jwt_required()
+    def create_produto():
+        return ProdutoController.create_produto()
+
+    @app.route('/produtos', methods=['GET'])
+    @jwt_required()
+    def get_all_produtos():
+        return ProdutoController.get_all_produtos()
+
+    @app.route('/produtos/<int:produto_id>', methods=['GET'])
+    @jwt_required()
+    def get_produto_by_id(produto_id):
+        return ProdutoController.get_produto_by_id(produto_id)
+
+    @app.route('/produtos/<int:produto_id>', methods=['PUT'])
+    @jwt_required()
+    def update_produto(produto_id):
+        return ProdutoController.update_produto(produto_id)
+
+    @app.route('/produtos/<int:produto_id>/inativar', methods=['POST'])
+    @jwt_required()
+    def inativar_produto(produto_id):
+        return ProdutoController.inativar_produto(produto_id)
+    
+    @app.route('/produtos/<int:produto_id>/ativar', methods=['POST'])
+    @jwt_required()
+    def ativar_produto(produto_id):
+        return ProdutoController.ativar_produto(produto_id)

@@ -7,6 +7,7 @@ from flask_jwt_extended import JWTManager
 from src.config.database import db, init_db
 from src.routes import init_routes
 from src.Infrastructuree.vendedor_model import VendedorModel
+from src.Infrastructuree.produto_model import ProdutoModel
 from src.Infrastructuree.token_blocklist_model import TokenBlocklistModel
 
 # --- 1. Inicialização ---
