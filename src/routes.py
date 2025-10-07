@@ -1,6 +1,7 @@
 from flask import jsonify, make_response, request
 from src.application.controllers.vendedor_controller import VendedorController
 from src.application.controllers.produto_controller import ProdutoController
+from src.application.controllers.venda_controller import VendaController
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 def init_routes(app):
@@ -94,3 +95,15 @@ def init_routes(app):
     @jwt_required()
     def ativar_produto(produto_id):
         return ProdutoController.ativar_produto(produto_id)
+    
+    
+    
+    
+    # ROTAS DE VENDA
+    
+    
+    
+    @app.route('/vendas', methods=['POST'])
+    @jwt_required()
+    def registrar_venda():
+        return VendaController.registrar_venda()
