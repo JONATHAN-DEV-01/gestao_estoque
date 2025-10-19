@@ -1,28 +1,30 @@
-# docker-compose.yml (Versão Completa e Recomendada)
+# docker-compose.yml (Versão para PostgreSQL)
 
 version: '3.8'
 
 services:
   db:
-    image: mysql:8.0
-    container_name: mysql_db
+    # --- ALTERAÇÃO 1: Imagem do Banco ---
+    image: postgres:15-alpine  # Usando uma imagem oficial e leve do PostgreSQL
+    container_name: postgres_db # Nome do contêiner atualizado
     restart: always
     env_file:
       - ./.env
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      # --- ALTERAÇÃO 2: Variáveis de Ambiente do PostgreSQL ---
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "3307:3306"
+      # --- ALTERAÇÃO 3: Porta Padrão do PostgreSQL ---
+      - "5432:5432"
     volumes:
-      - mysql-data:/var/lib/mysql
-      # Monta o script para criar o banco de dados de teste na inicialização
+      # --- ALTERAÇÃO 4 (Opcional, mas recomendado): Novo volume ---
+      - postgres-data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d
-    # Verifica se o serviço do MySQL está realmente pronto para aceitar conexões
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USER}", "-p${DB_PASSWORD}"]
+      # --- ALTERAÇÃO 5: Comando de Healthcheck do PostgreSQL ---
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -35,7 +37,6 @@ services:
       - "5000:5000"
     env_file:
       - ./.env
-    # Garante que a API só inicie DEPOIS que o banco de dados estiver saudável
     depends_on:
       db:
         condition: service_healthy
@@ -43,4 +44,5 @@ services:
       - .:/app
 
 volumes:
-  mysql-data:
+  # --- ALTERAÇÃO 6: Nome do volume atualizado ---
+  postgres-data:

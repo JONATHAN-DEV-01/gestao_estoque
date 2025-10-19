@@ -11,5 +11,7 @@ cryptography
 Flask-JWT-Extended
 PyJWT 
 pytest
-pytest-mock
+pytest-mock 
+Flask-Cors
+psycopg2-binary
 

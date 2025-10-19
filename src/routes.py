@@ -22,7 +22,7 @@ def init_routes(app):
         return VendedorController.logout()
     # -----------------------------------
 
-    @app.route('/vendedores', methods=['POST'])
+    @app.route('/vendedores', methods=['POST']) 
     def create_vendedor():
         return VendedorController.create_vendedor()
 

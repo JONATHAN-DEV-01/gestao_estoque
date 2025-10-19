@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
+from flask_cors import CORS
 from src.config.database import db, init_db
 from src.routes import init_routes
 from src.Infrastructuree.vendedor_model import VendedorModel
@@ -14,6 +15,7 @@ from src.Infrastructuree.token_blocklist_model import TokenBlocklistModel
 # --- 1. Inicialização ---
 load_dotenv()
 app = Flask(__name__)
+CORS(app)
 
 
 # --- 2. Configuração do Banco de Dados ---
