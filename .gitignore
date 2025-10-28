@@ -5,5 +5,7 @@ __pycache__
 *$py.class
 .pytest_cache/
 .coverage
+.supabase
+node_modules/
 
 
