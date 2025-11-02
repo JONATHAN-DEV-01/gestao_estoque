@@ -16,7 +16,7 @@ def init_db(app):
 
     # --- ALTERAÇÃO PRINCIPAL AQUI ---
     # Trocando o formato da URI de conexão para PostgreSQL
-    database_uri = f'postgresql+psycopg2://{db_user}:{db_password}@{db_host}:5432/{db_name}?sslmode=require'
+    database_uri = f'postgresql+psycopg2://{db_user}:{db_password}@{db_host}:6543/{db_name}?sslmode=require'
     
     app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
