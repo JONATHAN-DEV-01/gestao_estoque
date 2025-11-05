@@ -1,5 +1,6 @@
 # src/Infrastructure/venda_repository.py (Versão Corrigida)
 from sqlalchemy import func, desc
+from datetime import date
 import uuid
 from sqlalchemy import select
 from src.config.database import db
@@ -86,20 +87,27 @@ class VendaRepository:
             func.count(func.distinct(VendaModel.transacao_id))
         ).filter(VendaModel.vendedor_id == vendedor_id)
 
+        # --- NOVA CONSULTA PARA VENDAS HOJE ---
+        vendas_hoje_query = db.session.query(
+            func.count(func.distinct(VendaModel.transacao_id))
+        ).filter(
+            VendaModel.vendedor_id == vendedor_id,
+            # Compara se a data da coluna 'data_venda' é igual à data de hoje
+            func.date(VendaModel.data_venda) == date.today()
+        )
+        # ------------------------------------
+
         valor_total = total_value_query.scalar() or 0
         total_vendas = total_sales_query.scalar() or 0
+        vendas_hoje = vendas_hoje_query.scalar() or 0 # <-- LINHA ATUALIZADA
         
         ticket_medio = (valor_total / total_vendas) if total_vendas > 0 else 0
-
-        # Vendas Hoje (simplificado, você pode adicionar um filtro de data aqui)
-        # Por enquanto, vamos retornar o total
-        vendas_hoje = 0 # Implementação de filtro de data necessária aqui
 
         return {
             "totalVendas": total_vendas,
             "valorTotal": valor_total,
             "ticketMedio": ticket_medio,
-            "vendaHoje": vendas_hoje
+            "vendaHoje": vendas_hoje # <-- Agora envia o valor real
         }
 
     def get_top_selling_products(self, vendedor_id: int) -> list:
