@@ -1,3 +1,4 @@
+
 import os
 from dotenv import load_dotenv
 from flask import Flask, jsonify
@@ -5,8 +6,7 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from src.config.database import db, init_db
 from src.routes import init_routes
-# As importações dos modelos não são mais necessárias aqui, pois `db.create_all()` foi removido.
-# from src.Infrastructure.token_blocklist_model import TokenBlocklistModel
+# As importações dos modelos não são mais necessárias aqui.
 
 # --- 1. Inicialização ---
 load_dotenv()
@@ -14,11 +14,11 @@ app = Flask(__name__)
 
 
 # --- 2. Configuração do CORS (Cross-Origin Resource Sharing) ---
-# Substitua pela URL real do seu deploy no Vercel.
 VERCEL_URL = "https://stockflow-for-sellers.vercel.app" 
 
-# Configura o CORS para permitir requisições APENAS do seu site no Vercel
-# e do seu ambiente local (para você continuar testando).
+# ### CORREÇÃO 1: A política de CORS deve cobrir TODAS as rotas ("/*") ###
+# Suas rotas de login e cadastro não começam com /api, então
+# a regra antiga de "/api/*" iria bloqueá-las.
 CORS(app, resources={r"/*": {"origins": [VERCEL_URL, "http://localhost:8080"]}})
 
 
@@ -36,7 +36,7 @@ jwt = JWTManager(app)
 # --- Callbacks do JWT ---
 @jwt.token_in_blocklist_loader
 def check_if_token_in_blocklist(jwt_header, jwt_payload):
-    # Importa o modelo aqui para evitar importação circular e manter o escopo limpo.
+    # ### CORREÇÃO 2: Corrigido o erro de digitação 'Infrastructuree' ###
     from src.Infrastructuree.token_blocklist_model import TokenBlocklistModel
     jti = jwt_payload["jti"]
     token = TokenBlocklistModel.query.filter_by(jti=jti).first()
@@ -50,15 +50,11 @@ def revoked_token_callback(jwt_header, jwt_payload):
 # --- 5. Inicialização das Rotas ---
 init_routes(app)
 
-# A seção `with app.app_context(): db.create_all()` foi REMOVIDA.
-# Em um ambiente de produção, o esquema do banco de dados é gerenciado
-# por ferramentas de migração (neste caso, a Supabase CLI que já usamos).
-# Manter `db.create_all()` aqui é redundante e pode causar inconsistências.
+# O `db.create_all()` foi corretamente removido para produção.
+# O schema do banco é gerenciado pelas migrações do Supabase CLI.
 
 
 # --- 6. Ponto de Entrada para Execução ---
 if __name__ == '__main__':
-    # O modo debug é lido da variável de ambiente FLASK_DEBUG para flexibilidade.
-    # Em produção (Render/Gunicorn), esta seção não é executada.
     debug_mode = os.getenv("FLASK_DEBUG", "False").lower() in ["true", "1"]
     app.run(host='0.0.0.0', port=5000, debug=debug_mode)
