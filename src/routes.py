@@ -107,3 +107,8 @@ def init_routes(app):
     @jwt_required()
     def registrar_venda():
         return VendaController.registrar_venda()
+    
+    @app.route('/dashboard/summary', methods=['GET'])
+    @jwt_required()
+    def get_dashboard_summary():
+        return VendaController.get_dashboard_summary()

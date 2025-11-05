@@ -2,6 +2,7 @@ from sqlalchemy import select
 from src.config.database import db
 from src.Domain.produto_domain import Produto
 from src.Infrastructuree.produto_model import ProdutoModel
+from sqlalchemy import func
 
 class ProdutoRepository:
     def add(self, produto_domain: Produto) -> Produto:
@@ -50,3 +51,40 @@ class ProdutoRepository:
             imagem=produto_db.imagem,
             vendedor_id=produto_db.vendedor_id
         )
+    
+    def get_product_summary(self, vendedor_id: int) -> dict:
+        """
+        Calcula o resumo de status de produtos (Total, Ativos, Inativos, Estoque Baixo)
+        para um vendedor específico.
+        """
+        # 1. Total de Produtos
+        total_produtos = db.session.query(func.count(ProdutoModel.id)).filter(
+            ProdutoModel.vendedor_id == vendedor_id
+        ).scalar() or 0
+        
+        # 2. Produtos Ativos
+        produtos_ativos = db.session.query(func.count(ProdutoModel.id)).filter(
+            ProdutoModel.vendedor_id == vendedor_id,
+            ProdutoModel.status == "Ativo"
+        ).scalar() or 0
+        
+        # 3. Produtos Inativos
+        produtos_inativos = db.session.query(func.count(ProdutoModel.id)).filter(
+            ProdutoModel.vendedor_id == vendedor_id,
+            ProdutoModel.status == "Inativo"
+        ).scalar() or 0
+
+        # 4. Estoque Baixo (ex: < 10 unidades e ativos)
+        estoque_baixo = db.session.query(func.count(ProdutoModel.id)).filter(
+            ProdutoModel.vendedor_id == vendedor_id,
+            ProdutoModel.status == "Ativo",
+            ProdutoModel.quantidade < 10,
+            ProdutoModel.quantidade > 0
+        ).scalar() or 0
+
+        return {
+            "totalProdutos": total_produtos,
+            "produtosAtivos": produtos_ativos,
+            "produtosInativos": produtos_inativos,
+            "estoqueBaixo": estoque_baixo
+        }

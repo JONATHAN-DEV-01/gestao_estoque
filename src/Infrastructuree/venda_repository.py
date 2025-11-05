@@ -1,5 +1,5 @@
 # src/Infrastructure/venda_repository.py (Versão Corrigida)
-
+from sqlalchemy import func, desc
 import uuid
 from sqlalchemy import select
 from src.config.database import db
@@ -69,3 +69,61 @@ class VendaRepository:
             # 6. Se qualquer erro ocorreu, desfaz todas as alterações
             db.session.rollback()
             raise e # Levanta a exceção para a camada de serviço/controller tratar
+    
+    
+    def get_sales_summary(self, vendedor_id: int) -> dict:
+        """
+        Calcula o resumo de vendas (Total de vendas, Valor Total, Ticket Médio)
+        para um vendedor específico.
+        """
+        # Calcula a soma dos totais das vendas
+        total_value_query = db.session.query(
+            func.sum(VendaModel.preco_unitario_venda * VendaModel.quantidade)
+        ).filter(VendaModel.vendedor_id == vendedor_id)
+        
+        # Calcula o número de transações (grupos de venda)
+        total_sales_query = db.session.query(
+            func.count(func.distinct(VendaModel.transacao_id))
+        ).filter(VendaModel.vendedor_id == vendedor_id)
+
+        valor_total = total_value_query.scalar() or 0
+        total_vendas = total_sales_query.scalar() or 0
+        
+        ticket_medio = (valor_total / total_vendas) if total_vendas > 0 else 0
+
+        # Vendas Hoje (simplificado, você pode adicionar um filtro de data aqui)
+        # Por enquanto, vamos retornar o total
+        vendas_hoje = 0 # Implementação de filtro de data necessária aqui
+
+        return {
+            "totalVendas": total_vendas,
+            "valorTotal": valor_total,
+            "ticketMedio": ticket_medio,
+            "vendaHoje": vendas_hoje
+        }
+
+    def get_top_selling_products(self, vendedor_id: int) -> list:
+        """
+        Retorna os 5 produtos mais vendidos por valor total para um vendedor.
+        """
+        query = db.session.query(
+            ProdutoModel.nome,
+            func.sum(VendaModel.quantidade).label('vendas'),
+            func.sum(VendaModel.preco_unitario_venda * VendaModel.quantidade).label('valor')
+        ).join(
+            ProdutoModel, VendaModel.produto_id == ProdutoModel.id
+        ).filter(
+            VendaModel.vendedor_id == vendedor_id
+        ).group_by(
+            ProdutoModel.id, ProdutoModel.nome
+        ).order_by(
+            desc('valor') # Ordena pelo valor total
+        ).limit(5)
+        
+        top_products_raw = query.all()
+        
+        # Converte o resultado para o formato de dicionário que o front-end espera
+        return [
+            {"nome": nome, "vendas": int(vendas), "valor": float(valor)}
+            for nome, vendas, valor in top_products_raw
+        ]

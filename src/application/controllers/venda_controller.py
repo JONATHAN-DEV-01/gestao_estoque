@@ -23,3 +23,14 @@ class VendaController:
             return make_response(jsonify({"erro": str(e)}), 400)
         except Exception as e:
             return make_response(jsonify({"erro": str(e)}), 500)
+    
+    @staticmethod
+    def get_dashboard_summary():
+        service = VendaService()
+        vendedor_id = int(get_jwt_identity()) # Pega o vendedor logado
+        
+        try:
+            summary_data = service.get_dashboard_summary(vendedor_id)
+            return make_response(jsonify(summary_data), 200)
+        except Exception as e:
+            return make_response(jsonify({"erro": str(e)}), 500)
