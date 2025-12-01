@@ -40,7 +40,7 @@ class ProdutoRepository:
             produto_db.status = produto_domain.status
             produto_db.imagem = produto_domain.imagem
             db.session.commit()
-
+    
     def _to_domain(self, produto_db: ProdutoModel) -> Produto:
         return Produto(
             id=produto_db.id,

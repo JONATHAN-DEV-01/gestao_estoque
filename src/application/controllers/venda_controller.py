@@ -34,3 +34,25 @@ class VendaController:
             return make_response(jsonify(summary_data), 200)
         except Exception as e:
             return make_response(jsonify({"erro": str(e)}), 500)
+    @staticmethod
+    def listar_vendas():
+        service = VendaService()
+        vendedor_id = int(get_jwt_identity())
+        try:
+            # O repositório já retorna uma lista de dicionários formatada
+            vendas = service.listar_minhas_vendas(vendedor_id)
+            return make_response(jsonify(vendas), 200)
+        except Exception as e:
+            return make_response(jsonify({"erro": str(e)}), 500)
+
+    @staticmethod
+    def cancelar_venda(venda_id):
+        service = VendaService()
+        vendedor_id = int(get_jwt_identity())
+        try:
+            service.cancelar_venda(venda_id, vendedor_id)
+            return make_response(jsonify({"mensagem": "Venda cancelada e estoque estornado com sucesso!"}), 200)
+        except (ValueError, PermissionError) as e:
+            return make_response(jsonify({"erro": str(e)}), 400) # Erro de cliente (não achou ou sem permissão)
+        except Exception as e:
+            return make_response(jsonify({"erro": str(e)}), 500)

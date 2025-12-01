@@ -112,3 +112,14 @@ def init_routes(app):
     @jwt_required()
     def get_dashboard_summary():
         return VendaController.get_dashboard_summary()
+    
+    @app.route('/vendas', methods=['GET'])
+    @jwt_required()
+    def listar_vendas():
+        return VendaController.listar_vendas()
+
+    # Cancelar venda específica
+    @app.route('/vendas/<int:venda_id>', methods=['DELETE'])
+    @jwt_required()
+    def cancelar_venda(venda_id):
+        return VendaController.cancelar_venda(venda_id)

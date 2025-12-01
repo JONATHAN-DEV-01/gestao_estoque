@@ -135,3 +135,64 @@ class VendaRepository:
             {"nome": nome, "vendas": int(vendas), "valor": float(valor)}
             for nome, vendas, valor in top_products_raw
         ]
+    def get_all_by_vendedor(self, vendedor_id: int):
+        """
+        Busca todas as vendas de um vendedor, trazendo também o nome do produto.
+        """
+        # Fazemos um JOIN para pegar o nome do produto na mesma consulta
+        results = db.session.query(VendaModel, ProdutoModel.nome).join(
+            ProdutoModel, VendaModel.produto_id == ProdutoModel.id
+        ).filter(
+            VendaModel.vendedor_id == vendedor_id
+        ).order_by(
+            desc(VendaModel.data_venda)
+        ).all()
+        
+        # Formatamos a saída para facilitar o uso no front-end
+        lista_vendas = []
+        for venda, produto_nome in results:
+            venda_dict = {
+                "id": venda.id,
+                "transacao_id": venda.transacao_id,
+                "produto_id": venda.produto_id,
+                "produto_nome": produto_nome, # Nome do produto
+                "quantidade": venda.quantidade,
+                "preco_unitario": venda.preco_unitario_venda,
+                "total": venda.quantidade * venda.preco_unitario_venda,
+                "data_venda": venda.data_venda.isoformat()
+            }
+            lista_vendas.append(venda_dict)
+            
+        return lista_vendas
+
+    def cancelar_venda(self, venda_id: int, vendedor_id: int):
+        """
+        Cancela uma venda: Deleta o registro e devolve os produtos ao estoque.
+        """
+        try:
+            # 1. Busca a venda garantindo que pertence ao vendedor
+            venda = db.session.get(VendaModel, venda_id)
+            
+            if not venda:
+                raise ValueError("Venda não encontrada.")
+            
+            if venda.vendedor_id != vendedor_id:
+                raise PermissionError("Você não tem permissão para cancelar esta venda.")
+
+            # 2. Busca o produto para devolver o estoque
+            produto = db.session.get(ProdutoModel, venda.produto_id)
+            
+            if produto:
+                # AQUI ACONTECE O ESTORNO
+                produto.quantidade += venda.quantidade
+            
+            # 3. Deleta o registro da venda
+            db.session.delete(venda)
+            
+            # 4. Confirma a transação (Estorno + Delete)
+            db.session.commit()
+            return True
+
+        except Exception as e:
+            db.session.rollback() # Desfaz tudo se der erro
+            raise e

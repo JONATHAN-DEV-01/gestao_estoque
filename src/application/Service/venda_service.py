@@ -38,3 +38,11 @@ class VendaService:
             "productData": product_data,
             "topProducts": top_products
         }
+    def listar_minhas_vendas(self, vendedor_id):
+        """Retorna o histórico completo de vendas do vendedor."""
+        return self.venda_repo.get_all_by_vendedor(vendedor_id)
+
+    def cancelar_venda(self, venda_id, vendedor_id):
+        """Cancela uma venda específica."""
+        # Podemos adicionar validações extras aqui se necessário (ex: prazo de cancelamento)
+        return self.venda_repo.cancelar_venda(venda_id, vendedor_id)
